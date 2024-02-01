@@ -226,3 +226,47 @@ def main():
 
     # Train the model ⚡
     trainer.fit(model)
+
+if __name__ == "__main__":
+    if len(sys.argv) == 1:
+        print("Running in learning mode: ")
+
+        global files, data_x, data_y, train_x, test_x, train_y, test_y, train_ds, test_ds
+        files = glob.glob("db/**/*.jpg")
+
+        random.shuffle(files)
+
+        data_x = files
+        data_y = [get_label(f) for f in files]
+
+        train_x, test_x, train_y, test_y = train_test_split(data_x, data_y, test_size=.2, shuffle=True)
+
+        train_ds = MyDataset(
+            train_x,
+            train_y
+        )
+
+        test_ds = MyDataset(
+            test_x,
+            test_y,
+            phase='val'
+        )
+
+        main()
+    else:
+        img = sys.argv[1]
+        with torch.no_grad():
+            model = MyModel.load_from_checkpoint("/workspaces/backend/models_ok/sample-cat-or-not-v0_0_1-epoch=14-val_loss=0.13-val_acc=0.95-val_f1=0.95.ckpt")
+            model.eval()
+            transform = ImageTransform()
+            img = Image.open(img)
+            img = transform(img, 'test')
+            img = torch.unsqueeze(img, dim=0)
+            res = model(img)
+            res = res.cpu().detach().numpy()
+
+            res = [
+                (x[0] + (1-x[1])) / 2 for x in res
+            ]
+
+            print(res[0])
